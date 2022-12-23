@@ -60,54 +60,72 @@ export namespace Generation {
     return response;
   }
 
+  // string type
+  export type GPTResponse =
+    | `Assistant: ${string}`
+    | `Generation: ${number}x"${string}"`;
+
   export async function generate(prompt: string) {
     use.getState().setLoading(true);
 
-    const response = await gpt3(
-      `${Prompt.INITIAL}\n\nMessage: "${prompt}"\nResponse: `
-    );
+    const hist = History.getLastItems(10);
 
-    if (RegExp("(s*nulls*)").test(response)) {
-      const hist = History.getLastTextItems(5);
+    const init_prompt = `${Prompt.INITIAL.replace(
+      "{DATE}",
+      new Date().toLocaleTimeString()
+    )}${
+      hist && hist.length > 0
+        ? hist
+            .map(
+              (h) =>
+                `User: ${h.user}\n${h.type}: ${
+                  h.type === "Assistant"
+                    ? h.text
+                    : `${h.images.length}x"${h.prompt}"`
+                }`
+            )
+            .join("\n\n")
+        : ""
+    }\n\nUser: ${prompt}\n`;
 
-      const text = await gpt3(
-        `${Prompt.TEXT.replace("{DATE}", new Date().toLocaleTimeString())}${
-          // map history to \n\nUser: {prompt}\nAssistant: {text}
-          hist && hist.length > 0
-            ? hist
-                .map((h) => `\n\nUser: ${h.prompt}\nAssistant: ${h.text}`)
-                .join("")
-            : ""
-        }\n\nUser: ${prompt}\nAssistant: `
-      );
+    const response = await gpt3(init_prompt);
 
-      use.getState().setLoading(false);
+    console.log(init_prompt);
+    console.log(response);
 
-      TextAnswer.use.getState().setValue(text);
-
-      History.use.getState().addItem({
-        prompt,
-        text,
-        type: "text",
-      } as History.TextHistoryItem);
-
-      return text;
-    } else {
-      // message will look like this {number}x"{prompt}"
-      const [count, prompt] = response.replace(/"/g, "").split("x");
-      const artifacts = await stable(prompt, parseInt(count));
+    if (RegExp(/Generation:\s(\d+)x"(.+)"/).test(response)) {
+      const [count, imgPrompt] = response
+        .replace("Generation: ", "")
+        .replace(/"/g, "")
+        .split("x");
+      const artifacts = await stable(imgPrompt, parseInt(count));
 
       use.getState().setLoading(false);
 
       ImageAnswer.use.getState().setArtifacts(artifacts);
 
       History.use.getState().addItem({
-        prompt,
+        user: prompt,
+        prompt: imgPrompt,
         images: artifacts.map((a) => a.image),
-        type: "image",
+        type: "Generation",
       } as History.ImageHistoryItem);
 
       return artifacts;
+    } else {
+      use.getState().setLoading(false);
+
+      const text = response.replace("Assistant: ", "");
+
+      TextAnswer.use.getState().setValue(text);
+
+      History.use.getState().addItem({
+        user: prompt,
+        text,
+        type: "Assistant",
+      } as History.TextHistoryItem);
+
+      return text;
     }
   }
 }

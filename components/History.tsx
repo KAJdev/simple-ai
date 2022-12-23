@@ -51,7 +51,7 @@ export function History() {
                 <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50" />
                 <div className="absolute top-0 left-0 w-full h-full flex flex-col justify-center items-center">
                   <div className="text-2xl font-medium font-mono text-center">
-                    {item.prompt}
+                    {item.user}
                   </div>
                   <div className="text-2xl font-medium font-mono text-center">
                     {item.text}
@@ -90,19 +90,24 @@ export namespace History {
   export const getLastTextItems = (n: number) => {
     return History.use
       .getState()
-      .history.filter((item) => item.type === "text")
+      .history.filter((item) => item.type === "Assistant")
       .slice(-n) as TextHistoryItem[];
   };
 
+  export const getLastItems = (n: number) => {
+    return History.use.getState().history.slice(-n) as HistoryItem[];
+  };
+
   export type ImageHistoryItem = {
-    type: "image";
+    type: "Generation";
+    user: string;
     prompt: string;
     images: string[];
   };
 
   export type TextHistoryItem = {
-    type: "text";
-    prompt: string;
+    type: "Assistant";
+    user: string;
     text: string;
   };
 

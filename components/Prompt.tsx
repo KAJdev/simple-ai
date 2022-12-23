@@ -66,9 +66,9 @@ export function Prompt() {
       }}
       onBlur={(e) => {
         if (lastItem) {
-          if (lastItem.type === "text") {
+          if (lastItem.type === "Assistant") {
             textAnswer.setValue(lastItem.text);
-          } else if (lastItem.type === "image") {
+          } else if (lastItem.type === "Generation") {
             imageAnswer.setArtifacts(
               lastItem.images.map((i) => ({ image: i, seed: 0 }))
             );
@@ -96,26 +96,27 @@ export namespace Prompt {
   }));
 
   export const INITIAL =
-    `Determine if the following message brings an image to mind. If so, respond with only the amount of images and a description of a more detailed image than the one described. Otherwise, respond with "null".
+    `Determine the specific action of a user's message based on the following list and format the response correctly using the previous history as context | Date: {DATE}
 
-examples:
-Message: "I wonder what a cat looks like"
-Response: 4x"A fluffy white cat with bright blue eyes perched atop a windowsill, looking out at the world with a curious expression."
+Actions:
+- Assistant chat (Assistant: {message})
+- Image Generation (Generate: {count}x"{prompt}")
 
-Message: "Man I would kill to see some cars right now"
-Response: 3x"A red Ferrari sitting idle on a race track at night. Headlights shining through the misty night"
+Example:
+User: Hello computer
+Assistant: Hi there! How can I help you?
 
-Message: "Two photos of cats"
-Response: 2x"Two cats lying in the sun, cartoon drawing"
+User: Show me an image of a dog
+Generation: 1x"A black and white border collie running through a meadow, chasing a butterfly"
 
-Message: "I want to see a hotdog"
-Response: 1x"A delicious-looking hotdog on a plate"
+User: What is Mars?
+Assistant: Mars is the fourth planet from the Sun and the second smallest planet in the Solar System. It is a terrestrial planet, meaning it is composed of mostly rock. It has a thin atmosphere and is home to the largest volcano in the Solar System, Olympus Mons.
 
-Message: "Show me 5 photos of dogs"
-Response: 5x"A golden retriever puppy playing in a field of wildflowers, tongue lolling out of its mouth in joy."
+User: What's it look like?
+Generation: 3x"A vivid photo of the red planet Mars, taken from a telescope"
 
-Message: "Paint something like Tyler Edlin's paintings"
-Response: 1x"A beautiful concept art painting by Tyler Edlin"` as const;
+New Context (no memory of previous prompts):
+` as const;
 
   export const TEXT =
     `You are Assistant. A Large Language Model (LLM) Trained to answer questions and provide feedback | Date: {DATE} | Browsing: Disabled` as const;
