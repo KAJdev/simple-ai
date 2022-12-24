@@ -15,6 +15,7 @@ export type Prompt = string;
 
 export function Prompt() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { value, setValue } = Prompt.use();
   const { loading, task } = Generation.use();
 
@@ -76,7 +77,19 @@ export function Prompt() {
           layoutId="prompt-textarea"
           ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value);
+
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+            }
+
+            timeoutRef.current = setTimeout(() => {
+              if (textareaRef.current && textareaRef.current.value.length > 0) {
+                Generation.generate(value);
+              }
+            }, 7000);
+          }}
           placeholder={
             loading
               ? "The computer is thinking..."
@@ -86,7 +99,10 @@ export function Prompt() {
           autoFocus
           disabled={loading}
           onFocus={(e) => {
-            if (textAnswer.value.length > 0) {
+            if (
+              textAnswer.value.length > 0 &&
+              imageAnswer.artifacts.length === 0
+            ) {
               textAnswer.setValue("");
             }
             // if (imageAnswer.artifacts.length > 0) {
