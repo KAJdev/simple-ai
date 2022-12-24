@@ -127,6 +127,10 @@ export function Prompt() {
               e.stopPropagation();
 
               if (value.trim().length > 0) {
+                if (timeoutRef.current) {
+                  clearTimeout(timeoutRef.current);
+                }
+
                 Generation.generate(value);
               }
             }
