@@ -6,7 +6,8 @@ import { History } from "./History";
 
 export type GenerationState = {
   loading: boolean;
-  setLoading: (loading: boolean) => void;
+  task: string | null;
+  setLoading: (loading: boolean, task?: string | null) => void;
 };
 
 export namespace Generation {
@@ -14,7 +15,8 @@ export namespace Generation {
 
   export const use = create<GenerationState>()((set) => ({
     loading: false,
-    setLoading: (loading) => set({ loading }),
+    task: null,
+    setLoading: (loading, task) => set({ loading, task: task || null }),
   }));
 
   export type Artifact = {
@@ -23,8 +25,6 @@ export namespace Generation {
   };
 
   export async function gpt3(prompt: string): Promise<string> {
-    use.getState().setLoading(true);
-
     const response = await fetch(`${API_BASE}/text`, {
       method: "POST",
       headers: {
@@ -33,8 +33,6 @@ export namespace Generation {
       body: JSON.stringify({ prompt }),
     }).then((res) => res.json());
 
-    use.getState().setLoading(false);
-
     return response.choices.pop().text;
   }
 
@@ -42,8 +40,6 @@ export namespace Generation {
     prompt: string,
     amount?: number
   ): Promise<Artifact[]> {
-    use.getState().setLoading(true);
-
     const response = await fetch(`${API_BASE}/image`, {
       method: "POST",
       headers: {
@@ -55,9 +51,32 @@ export namespace Generation {
       }),
     }).then((res) => res.json());
 
-    use.getState().setLoading(false);
-
     return response;
+  }
+
+  export async function interrogate(image: string): Promise<string> {
+    // turn image into base64
+    if (!image.startsWith("data:image/")) {
+      const response = await fetch(image);
+      const blob = await response.blob();
+      image = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    const response = await fetch(`${API_BASE}/interrogate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        image: image,
+      }),
+    }).then((res) => res.json());
+
+    return response.prompt;
   }
 
   // string type
@@ -66,13 +85,13 @@ export namespace Generation {
     | `Generation: ${number}x"${string}"`;
 
   export async function generate(prompt: string) {
-    use.getState().setLoading(true);
+    use.getState().setLoading(true, "Thinking...");
 
     const hist = History.getLastItems(10);
 
     const init_prompt = `${Prompt.INITIAL.replace(
       "{DATE}",
-      new Date().toLocaleTimeString()
+      `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`
     )}${
       hist && hist.length > 0
         ? hist
@@ -94,6 +113,8 @@ export namespace Generation {
     console.log(response);
 
     if (RegExp(/Generation:\s(\d+)x"(.+)"/).test(response)) {
+      Generation.use.getState().setLoading(true, "Imagining...");
+
       const [count, imgPrompt] = response
         .replace("Generation: ", "")
         .replace(/"/g, "")

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import create from "zustand";
 import { Generation } from "./Generation";
@@ -16,7 +16,7 @@ export type Prompt = string;
 export function Prompt() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { value, setValue } = Prompt.use();
-  const { loading } = Generation.use();
+  const { loading, task } = Generation.use();
 
   const textAnswer = TextAnswer.use();
   const imageAnswer = ImageAnswer.use();
@@ -38,54 +38,86 @@ export function Prompt() {
   }, [value, textareaRef]);
 
   return (
-    <motion.textarea
-      layoutId="prompt"
-      layout="preserve-aspect"
-      ref={textareaRef}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      placeholder="The world awaits your wisdom..."
-      className={`bg-transparent text-4xl font-medium w-full h-full resize-none outline-none focus:outline-none text-center placeholder:opacity-50 ${
-        loading ? "opacity-50 animate-pulse" : ""
-      }`}
-      autoFocus
-      disabled={loading}
-      transition={{
-        type: "spring",
-        damping: 20,
-        stiffness: 100,
-      }}
-      onFocus={(e) => {
-        if (textAnswer.value.length > 0) {
-          textAnswer.setValue("");
-        }
-        if (imageAnswer.artifacts.length > 0) {
-          imageAnswer.setArtifacts([]);
-        }
-        e.target.setSelectionRange(0, e.target.value.length);
-      }}
-      onBlur={(e) => {
-        if (lastItem) {
-          if (lastItem.type === "Assistant") {
-            textAnswer.setValue(lastItem.text);
-          } else if (lastItem.type === "Generation") {
-            imageAnswer.setArtifacts(
-              lastItem.images.map((i) => ({ image: i, seed: 0 }))
-            );
+    <AnimatePresence mode="wait">
+      <motion.div
+        layoutId="prompt"
+        layout="preserve-aspect"
+        transition={{
+          type: "spring",
+          damping: 20,
+          stiffness: 100,
+        }}
+        initial={{ opacity: 0, y: "10%", filter: "blur(10px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: "10%", filter: "blur(10px)" }}
+        className={`flex flex-col h-full w-full ${
+          loading ||
+          (imageAnswer.artifacts && imageAnswer.artifacts.length > 0) ||
+          (textAnswer.value && textAnswer.value.length > 0)
+            ? "justify-end"
+            : "justify-center"
+        }`}
+      >
+        <motion.h2
+          layoutId="prompt-title"
+          className={`text-xl font-medium select-none font-mono text-center pointer-events-none ${
+            loading ? "opacity-50 animate-pulse" : ""
+          }`}
+          initial={{ opacity: 0, filter: "blur(10px)" }}
+          animate={{
+            opacity: loading ? 1 : 0,
+            filter: loading ? "blur(0px)" : "blur(10px)",
+          }}
+          exit={{ opacity: 0, filter: "blur(10px)" }}
+        >
+          {loading && task}
+        </motion.h2>
+        <motion.textarea
+          layoutId="prompt-textarea"
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={
+            loading
+              ? "The computer is thinking..."
+              : "The world awaits your wisdom..."
           }
-        }
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          e.stopPropagation();
+          className={`bg-transparent text-4xl font-medium w-full h-full resize-none outline-none focus:outline-none text-center placeholder:opacity-50`}
+          autoFocus
+          disabled={loading}
+          onFocus={(e) => {
+            if (textAnswer.value.length > 0) {
+              textAnswer.setValue("");
+            }
+            // if (imageAnswer.artifacts.length > 0) {
+            //   imageAnswer.setArtifacts([]);
+            // }
+            e.target.setSelectionRange(0, e.target.value.length);
+          }}
+          onBlur={(e) => {
+            if (lastItem) {
+              if (lastItem.type === "Assistant") {
+                textAnswer.setValue(lastItem.text);
+              } else if (lastItem.type === "Generation") {
+                imageAnswer.setArtifacts(
+                  lastItem.images.map((i) => ({ image: i, seed: 0 }))
+                );
+              }
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              e.stopPropagation();
 
-          if (value.trim().length > 0) {
-            Generation.generate(value);
-          }
-        }
-      }}
-    />
+              if (value.trim().length > 0) {
+                Generation.generate(value);
+              }
+            }
+          }}
+        />
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -114,6 +146,12 @@ Assistant: Mars is the fourth planet from the Sun and the second smallest planet
 
 User: What's it look like?
 Generation: 3x"A vivid photo of the red planet Mars, taken from a telescope"
+
+User: *added files*
+Generation: 2x"An image of a dog and a cat sitting on a couch together"
+
+User: What do these images have in common?
+Assistant: They are both animals.
 
 New Context (no memory of previous prompts):
 ` as const;

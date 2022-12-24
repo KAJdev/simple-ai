@@ -9,7 +9,7 @@ export function TextAnswer() {
       {value && value.length > 0 && (
         <motion.h1
           layoutId="text-answer"
-          className="text-2xl font-medium font-mono text-center"
+          className="text-2xl font-medium font-mono text-center pointer-events-none"
           initial={{ opacity: 0, y: 100, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: 100, filter: "blur(10px)" }}
