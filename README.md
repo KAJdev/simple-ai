@@ -4,6 +4,8 @@ Welcome to another one of my weekend projects exploring how humans can interact 
 
 > You can see a live version of the site at <https://simple.prototyped.ai/>
 
+![](https://kaj.has.rocks/r/ad09f2afb8.png)
+
 ## Contributing
 
 Just make a PR and try to follow the functional paradigm. All skill levels welcome. Let's build AI interactions together :).
