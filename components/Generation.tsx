@@ -48,6 +48,7 @@ export namespace Generation {
       body: JSON.stringify({
         prompt: prompt,
         count: amount || 1,
+        generate_negative_prompt: true
       }),
     }).then((res) => res.json());
 
